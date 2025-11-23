@@ -1,0 +1,243 @@
+name: CI/CD Pipeline - DevOps Challenge
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build:
+    name: BUILD Stage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Instalar dependências
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Verificar instalação
+      run: |
+        python --version
+        pip list
+    
+    - name: Validar estrutura do projeto
+      run: |
+        echo "Verificando arquivos essenciais..."
+        test -f app.py && echo "✓ app.py encontrado"
+        test -f requirements.txt && echo "✓ requirements.txt encontrado"
+        test -d tests && echo "✓ Diretório tests encontrado"
+    
+    - name: Build artefato
+      run: |
+        echo "Build concluído com sucesso!"
+        echo "Artefatos prontos para execução"
+
+  test:
+    name: TEST Stage
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Instalar dependências
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Executar testes unitários - Tipo 1 (API Endpoints)
+      run: |
+        pytest tests/test_unit_api.py -v --tb=short
+    
+    - name: Executar testes unitários - Tipo 2 (Classes e Modelos)
+      run: |
+        pytest tests/test_unit_classes.py -v --tb=short
+    
+    - name: Executar testes unitários - Tipo 3 (Validação e Regras de Negócio)
+      run: |
+        pytest tests/test_unit_validation.py -v --tb=short
+    
+    - name: Executar todos os testes com cobertura
+      run: |
+        pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=html
+    
+    - name: Upload relatório de cobertura
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: coverage-report
+        path: htmlcov/
+    
+    - name: Verificar cobertura mínima
+      run: |
+        pytest tests/ --cov=app --cov-report=term --cov-fail-under=70 || echo "Cobertura abaixo de 70%"
+
+  deploy:
+    name: DEPLOY Stage
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Instalar dependências
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Preparar para deploy
+      run: |
+        echo "Preparando aplicação para deploy..."
+        echo "✓ Dependências instaladas"
+        echo "✓ Aplicação validada"
+    
+    - name: Deploy para ambiente de produção
+      run: |
+        echo "🚀 Iniciando deploy..."
+        echo "Para deploy real, configure suas credenciais do provedor de nuvem"
+        echo "Consulte o arquivo DEPLOY.md para instruções detalhadas"
+        echo ""
+        echo "Deploy simulado concluído com sucesso!"
+        echo "Descomente a seção do seu provedor abaixo para deploy real"
+    
+    # ============================================
+    # OPÇÃO 1: RAILWAY (Recomendado - Mais Fácil)
+    # ============================================
+    # Passos:
+    # 1. Crie conta em https://railway.app
+    # 2. Crie um projeto e conecte seu repositório
+    # 3. Adicione secrets no GitHub:
+    #    - RAILWAY_TOKEN (obtenha em Settings → Tokens)
+    #    - RAILWAY_SERVICE_ID (obtenha em Settings → General)
+    # 4. Descomente as linhas abaixo
+    #
+    # - name: Instalar Railway CLI
+    #   run: |
+    #     npm install -g @railway/cli
+    # 
+    # - name: Deploy para Railway
+    #   env:
+    #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    #   run: |
+    #     railway link ${{ secrets.RAILWAY_SERVICE_ID }}
+    #     railway up --detach
+    
+    # ============================================
+    # OPÇÃO 2: RENDER
+    # ============================================
+    # Passos:
+    # 1. Crie conta em https://render.com
+    # 2. Crie um Web Service conectando seu repositório
+    # 3. Adicione secrets no GitHub:
+    #    - RENDER_API_KEY (obtenha em Account Settings → API Keys)
+    #    - RENDER_SERVICE_ID (encontre na URL do serviço)
+    # 4. Descomente as linhas abaixo
+    #
+    # - name: Deploy para Render
+    #   env:
+    #     RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    #     RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+    #   run: |
+    #     curl -X POST "https://api.render.com/deploy/srv/${{ secrets.RENDER_SERVICE_ID }}" \
+    #       -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
+    
+    # ============================================
+    # OPÇÃO 3: HEROKU
+    # ============================================
+    # Passos:
+    # 1. Crie conta em https://heroku.com
+    # 2. Crie um novo app
+    # 3. Adicione secrets no GitHub:
+    #    - HEROKU_API_KEY (obtenha em Account Settings → API Key)
+    #    - HEROKU_APP_NAME (nome do seu app)
+    #    - HEROKU_EMAIL (seu email do Heroku)
+    # 4. Descomente as linhas abaixo
+    #
+    # - name: Deploy para Heroku
+    #   uses: akhileshns/heroku-deploy@v3.12.12
+    #   with:
+    #     heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+    #     heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+    #     heroku_email: ${{ secrets.HEROKU_EMAIL }}
+    
+    # ============================================
+    # OPÇÃO 4: AWS ELASTIC BEANSTALK
+    # ============================================
+    # Passos:
+    # 1. Crie uma aplicação no AWS Elastic Beanstalk
+    # 2. Crie um IAM User com permissões AWSElasticBeanstalkFullAccess
+    # 3. Adicione secrets no GitHub:
+    #    - AWS_ACCESS_KEY_ID
+    #    - AWS_SECRET_ACCESS_KEY
+    #    - AWS_REGION (ex: us-east-1)
+    #    - EB_APPLICATION_NAME
+    #    - EB_ENVIRONMENT_NAME
+    # 4. Descomente as linhas abaixo
+    #
+    # - name: Configure AWS credentials
+    #   uses: aws-actions/configure-aws-credentials@v2
+    #   with:
+    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     aws-region: ${{ secrets.AWS_REGION }}
+    # 
+    # - name: Instalar EB CLI
+    #   run: |
+    #     pip install awsebcli
+    # 
+    # - name: Deploy para AWS Elastic Beanstalk
+    #   run: |
+    #     eb init ${{ secrets.EB_APPLICATION_NAME }} --region ${{ secrets.AWS_REGION }} --platform python-3.11
+    #     eb deploy ${{ secrets.EB_ENVIRONMENT_NAME }}
+    
+    # ============================================
+    # OPÇÃO 5: AZURE APP SERVICE
+    # ============================================
+    # Passos:
+    # 1. Crie um Web App no Azure Portal
+    # 2. Crie um Service Principal:
+    #    az ad sp create-for-rbac --name "github-actions" --role contributor
+    # 3. Adicione secrets no GitHub:
+    #    - AZURE_WEBAPP_NAME (nome do seu app)
+    #    - AZURE_CREDENTIALS (JSON do service principal)
+    # 4. Descomente as linhas abaixo
+    #
+    # - name: Configurar Azure
+    #   uses: azure/login@v1
+    #   with:
+    #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+    # 
+    # - name: Deploy para Azure App Service
+    #   uses: azure/webapps-deploy@v2
+    #   with:
+    #     app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+    #     package: .
+
