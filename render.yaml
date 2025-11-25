@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: labfinal-devops
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: FLASK_APP
+        value: app.py
+      - key: PYTHONUNBUFFERED
+        value: 1
+    healthCheckPath: /health
+

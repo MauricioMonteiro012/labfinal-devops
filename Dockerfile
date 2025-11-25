@@ -13,15 +13,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o código da aplicação
 COPY . .
 
-# Expõe a porta 5000
-EXPOSE 5000
+# Expõe a porta (Render usa variável de ambiente PORT)
+EXPOSE $PORT
 
 # Define variáveis de ambiente
 ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
-ENV PORT=5000
+ENV PYTHONUNBUFFERED=1
 
-# Comando para executar a aplicação
-CMD ["python", "app.py"]
+# Comando para executar a aplicação com gunicorn (produção)
+# Render injeta a variável PORT automaticamente
+# Usa sh -c para permitir expansão da variável PORT
+CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 120 app:app"
 
 
