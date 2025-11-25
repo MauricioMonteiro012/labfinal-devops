@@ -65,6 +65,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install "werkzeug<3.1" || true
     
     - name: Executar testes unitários - Tipo 1 (API Endpoints)
       run: |
